@@ -1588,35 +1588,37 @@ async function mountCardBrick(){
   const seq = state.brickSeq;
   const loading = document.getElementById('cardLoading');
   try{
-    if(typeof MercadoPago === 'undefined') throw new Error('Não foi possível carregar o formulário de cartão. Desative bloqueadores de anúncio e tente de novo, ou pague com PIX.');
+    if(typeof MercadoPago === 'undefined') throw new Error('Não foi possível carregar o Mercado Pago. Recarregue a página e tente novamente.');
     if(!window.CEU_VERDE_API_BASE) throw new Error('Backend ainda não configurado.');
-    if(!state.mpPublicKey){
-      const r = await fetch(`${window.CEU_VERDE_API_BASE}/payment/config`);
-      const d = await r.json().catch(()=>({}));
-      if(!r.ok || !d.publicKey) throw new Error(d.erro || 'Pagamento com cartão indisponível no momento. Pague com PIX.');
-      state.mpPublicKey = d.publicKey;
-    }
-    if(!state.mp) state.mp = new MercadoPago(state.mpPublicKey, {locale:'pt-BR'});
-    // Mesmo valor que o backend vai cobrar (subtotal + frete cotado).
+    const r = await fetch(`${window.CEU_VERDE_API_BASE}/payment/config`, {method:'GET', cache:'no-store'});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.publicKey) throw new Error(d.erro || 'Pagamento com cartão indisponível no momento. Pague com PIX.');
+    const publicKey = String(d.publicKey).trim();
+    if(!publicKey) throw new Error('Public Key do Mercado Pago não foi retornada pelo servidor.');
+    state.mpPublicKey = publicKey;
+    state.mp = new MercadoPago(publicKey, {locale:'pt-BR'});
     const total = Number((cartSubtotal() + (state.shipping ? Number(state.shipping.price) : 0)).toFixed(2));
     const controller = await state.mp.bricks().create('cardPayment', 'cardPaymentBrick_container', {
-      initialization: { amount: total, payer: { email: state.email } },
+      initialization: {amount: total, payer: {email: state.email || ''}},
       customization: {
-        paymentMethods: { maxInstallments: 10 },
-        visual: { style: { theme: 'default' }, texts: { formSubmit: 'Pagar R$ ' + total.toFixed(2).replace('.',',') } }
+        paymentMethods: {maxInstallments: 10},
+        visual: {style: {theme:'default'}, texts: {formSubmit: 'Pagar R$ ' + total.toFixed(2).replace('.',',')}}
       },
       callbacks: {
-        onReady: () => { const l = document.getElementById('cardLoading'); if(l) l.style.display='none'; },
+        onReady: () => { const l=document.getElementById('cardLoading'); if(l) l.style.display='none'; },
         onSubmit: (formData) => submitCardPayment(formData),
-        onError: (err) => { console.error('Card Brick:', err); }
+        onError: (err) => {
+          console.error('Card Brick:', err);
+          const l=document.getElementById('cardLoading'); if(l) l.style.display='none';
+          showCardError('O Mercado Pago não conseguiu carregar os campos do cartão. Atualize a página e tente novamente.');
+        }
       }
     });
-    // Se o cliente saiu da etapa enquanto carregava, descarta.
-    if(seq !== state.brickSeq){ try{ controller.unmount(); }catch(e){} return; }
+    if(seq !== state.brickSeq){ try{controller.unmount();}catch(e){} return; }
     state.cardBrick = controller;
   }catch(err){
-    console.error(err);
-    if(loading) loading.style.display = 'none';
+    console.error('Erro ao montar Card Brick:', err);
+    if(loading) loading.style.display='none';
     showCardError(err.message || 'Não foi possível abrir o formulário de cartão. Tente de novo ou pague com PIX.');
   }
 }
