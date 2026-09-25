@@ -319,12 +319,6 @@ footer{background:var(--forest-dark);color:rgba(246,241,230,0.85);padding:64px 0
 .subtotal-row{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:16px;color:var(--forest-dark);}
 .subtotal-row .val{font-family:'Fraunces',serif;font-size:20px;}
 
-/* ---------- cartão (Mercado Pago Card Payment Brick) ---------- */
-#cardPaymentBrick_container{min-height:40px;margin-top:8px;}
-.card-note{font-size:13px;color:var(--ink-soft);text-align:center;padding:14px 0;}
-.card-err{display:none;margin:12px 0 0;padding:12px 14px;border-radius:12px;background:#fdecea;color:#8a1f11;font-size:13px;font-weight:600;line-height:1.4;}
-.card-err.show{display:block;}
-
 /* ---------- checkout modal ---------- */
 .modal-overlay{position:fixed;inset:0;background:rgba(18,35,24,0.62);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;}
 .modal-overlay.show{display:flex;}
@@ -656,8 +650,9 @@ footer{background:var(--forest-dark);color:rgba(246,241,230,0.85);padding:64px 0
       <div>
         <h4>Contato</h4>
         <a href="#">www.ceuverdeamazonia.com</a>
-        <a href="#">+55 (99) 99999-9999</a>
-        <a href="#">@ceuverde</a>
+        <a href="tel:+556993725510">+55 69 9372-5510</a>
+        <a href="mailto:ceuverdeamazonia@gmail.com">ceuverdeamazonia@gmail.com</a>
+        <a href="https://www.instagram.com/ceuverde_amazonia/" target="_blank" rel="noopener noreferrer">@ceuverde_amazonia</a>
       </div>
     </div>
     <div class="foot-bottom">
@@ -711,7 +706,6 @@ footer{background:var(--forest-dark);color:rgba(246,241,230,0.85);padding:64px 0
 <!-- ================= TOAST ================= -->
 <div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg"></span></div>
 
-<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
 // Backend oficial da Céu Verde Amazônia (Render)
 window.CEU_VERDE_API_BASE = 'https://ceu-verde-backend.onrender.com/api';
@@ -744,7 +738,7 @@ function openProductDetail(id){
       ${p.tag?`<span class="tag" style="position:static;display:inline-block">${p.tag}</span>`:''}
       <h2>${p.name}</h2>
       <div class="pd-rating">★★★★★ <span style="color:var(--ink-soft);font-weight:500">${p.rating} avaliação</span></div>
-      <div class="pd-price">${p.id===15?'Preço a definir':`R$ ${p.price.toFixed(2).replace('.',',')}`}</div><div class="pd-pix">à vista no PIX</div>
+      <div class="pd-price">${p.price===0?'Preço a definir':`R$ ${p.price.toFixed(2).replace('.',',')}`}</div><div class="pd-pix">à vista no PIX</div>
       <div class="pd-freight">🚚 Frete calculado no checkout</div>
       <p class="pd-desc">${p.desc}</p>
       <div class="pd-benefits"><div class="pd-benefit">🌿 Produto selecionado</div><div class="pd-benefit">✓ Compra segura</div><div class="pd-benefit">🚚 Entrega para todo o Brasil</div><div class="pd-benefit">🛡️ Atendimento Céu Verde</div></div>
@@ -757,7 +751,7 @@ function openProductDetail(id){
 }
 function closeProductDetail(){document.getElementById('productDetailOverlay').classList.remove('show');document.body.style.overflow='';}
 function pdSetView(i,btn){const v=window._pdViews[i],img=document.getElementById('pdMainImg');if(!v||!img)return;img.src=v.src;img.style.objectFit=v.fit;img.style.objectPosition=v.pos;document.querySelectorAll('.pd-thumb').forEach(x=>x.classList.remove('active'));btn.classList.add('active');}
-function pdChangeQty(d){pdQty=Math.max(1,pdQty+d);document.getElementById('pdQty').textContent=pdQty;}
+function pdChangeQty(d){pdQty=Math.max(1,pdQty+d);document.getElementById('pdQty').textContent=pdQty;const p=window._pdProduct;if(p && p.price>0)document.querySelector('#productDetailContent .pd-price').textContent='R$ '+unitPrice(p,pdQty).toFixed(2).replace('.',',');}
 function pdAdd(id){for(let i=0;i<pdQty;i++) addToCart(id); closeProductDetail();}
 function pdWhatsApp(id){const p=PRODUCTS.find(x=>x.id==id);if(!p)return;const msg=encodeURIComponent(`Olá! Quero comprar ${pdQty}x ${p.name}.`);window.open(`https://wa.me/?text=${msg}`,'_blank');}
 
@@ -774,23 +768,23 @@ const CATEGORIES = [
 ];
 
 const PRODUCTS = [
-  {id:1, name:'Ice Gel Refrescante', cat:'corpo', shape:'jar', color:'#3aa1c9', price:29.90, oldPrice:34.90, tag:'Mais vendido', rating:4.8, weight:0.25,
+  {id:1, name:'Ice Gel Refrescante', cat:'corpo', shape:'jar', color:'#3aa1c9', price:15.75, price6:14.30, price12:11.00, oldPrice:34.90, tag:'Mais vendido', rating:4.8, weight:0.25,
     gallery:['images/img-04-e6e36a5c9493.png','images/img-05-8c10d996d417.png','images/img-06-60dafb651724.png'],
     img:'images/img-04-e6e36a5c9493.png',
     desc:'Gel refrescante Pharmakos D\'Amazônia com óleo de copaíba, alívio muscular imediato.'},
-  {id:2, name:'Óleo Elétrico com Copaíba', cat:'corpo', shape:'bottle', color:'#c94b3f', price:24.90, rating:4.7, weight:0.15, tag:'Mais vendido',
+  {id:2, name:'Óleo Elétrico com Copaíba', cat:'corpo', shape:'bottle', color:'#c94b3f', price:15.75, price6:14.30, price12:11.00, rating:4.7, weight:0.15, tag:'Mais vendido',
     gallery:['images/img-07-8779ad4eec86.png','images/img-08-dab69e5cfa7e.png','images/img-09-c99f1631f9bf.png'],
     img:'images/img-07-8779ad4eec86.png',
     desc:'Óleo corporal concentrado Pharmakos D\'Amazônia para massagens, conforto e relaxamento no dia a dia.'},
-  {id:3, name:'Bala de Gengibre da Amazônia com Limão', cat:'bemestar', shape:'sachet', color:'#7f9a4a', price:9.90, rating:4.9, weight:0.05, tag:'Lançamento',
+  {id:3, name:'Bala de Gengibre da Amazônia com Limão', cat:'bemestar', shape:'sachet', color:'#7f9a4a', price:6.30, price6:5.50, price12:4.40, rating:4.9, weight:0.05, tag:'Lançamento',
     img:'images/img-10-39a91e6a7e07.png',
     gallery:['images/img-10-39a91e6a7e07.png','images/img-11-93566aecb9ca.png','images/img-12-1079de73b707.png'],
     desc:'Bala de gengibre com limão, hálito puro e saudável com o sabor da Amazônia.'},
-  {id:13, name:'Bala de Gengibre da Amazônia com Cravo e Canela', cat:'bemestar', shape:'sachet', color:'#8c5a34', price:9.90, rating:4.9, weight:0.05, tag:'Lançamento',
+  {id:13, name:'Bala de Gengibre da Amazônia com Cravo e Canela', cat:'bemestar', shape:'sachet', color:'#8c5a34', price:6.30, price6:5.50, price12:4.40, rating:4.9, weight:0.05, tag:'Lançamento',
     img:'images/img-13-38338b25bfa4.png',
     gallery:['images/img-13-38338b25bfa4.png','images/img-14-aa55af048003.png','images/img-15-3441a092df76.png'],
     desc:'Bala de gengibre temperada com cravo e canela, sabor marcante da Amazônia.'},
-  {id:15, name:'Óleo de Castanha da Índia 50ml', cat:'corpo', shape:'bottle', color:'#315c38', price:0.00, rating:4.9, weight:0.05, tag:'Novo',
+  {id:15, name:'Óleo de Castanha da Índia 50ml', cat:'corpo', shape:'bottle', color:'#315c38', price:18.90, price6:16.83, price12:14.85, rating:4.9, weight:0.05, tag:'Novo',
     gallery:['images/img-16-2c0b23bdc675.png','images/img-17-d586dc61c077.png','images/img-18-b247bcba1150.png'],
     img:'images/img-16-2c0b23bdc675.png',
     desc:'Óleo de Castanha da Índia 100% natural, prensado a frio.'},
@@ -964,8 +958,8 @@ function renderProducts(){
         ${starsSVG(p.rating)}
         ${p.variants ? `<div style="margin-top:10px;"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:5px;">Escolha a cor</label><select id="variant-${p.id}" onclick="event.stopPropagation()" onchange="event.stopPropagation(); changeVariantImage('${p.id}', this.value)" style="width:100%;padding:9px 10px;border:1px solid #d8d4c7;border-radius:8px;background:#fff;">${p.variants.map(v=>`<option value="${v.productId}">${v.label}</option>`).join('')}</select></div>` : ''}
         <div class="card-footer">
-          <div class="price">${p.id===15 ? 'Preço a definir <small>consulte antes da compra</small>' : `R$ ${p.price.toFixed(2).replace('.',',')} ${p.oldPrice ? `<small style="text-decoration:line-through;">R$ ${p.oldPrice.toFixed(2).replace('.',',')}</small>` : `<small>à vista</small>`}`}</div>
-          <button class="add-btn" ${p.id===15 ? 'disabled style="opacity:.45;cursor:not-allowed" title="Preço ainda não definido"' : `onclick="event.stopPropagation(); addProductToCart(${JSON.stringify(p.id)}, event)"`}>
+          <div class="price">${p.price===0 ? 'Preço a definir <small>consulte antes da compra</small>' : `R$ ${p.price.toFixed(2).replace('.',',')} ${p.oldPrice ? `<small style="text-decoration:line-through;">R$ ${p.oldPrice.toFixed(2).replace('.',',')}</small>` : `<small>à vista</small>`}`}</div>
+          <button class="add-btn" ${p.price===0 ? 'disabled style="opacity:.45;cursor:not-allowed" title="Preço ainda não definido"' : `onclick="event.stopPropagation(); addProductToCart(${JSON.stringify(p.id)}, event)"`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
         </div>
@@ -1041,10 +1035,13 @@ function removeItem(id){
   updateCartBadge(); renderCart();
 }
 function cartCount(){ return Object.values(state.cart).reduce((a,b)=>a+b,0); }
+function unitPrice(p, qty=1){
+  return qty>=12 && p.price12!=null ? p.price12 : qty>=6 && p.price6!=null ? p.price6 : p.price;
+}
 function cartSubtotal(){
   return Object.entries(state.cart).reduce((sum,[id,qty])=>{
     const p = PRODUCTS.find(p=>p.id==id);
-    return sum + (p ? p.price*qty : 0);
+    return sum + (p ? Math.round(unitPrice(p,qty)*100)*qty/100 : 0);
   },0);
 }
 function cartWeight(){
@@ -1075,7 +1072,7 @@ function renderCart(){
         <div class="thumb">${p.img ? `<img src="${p.img}" alt="${p.name}" style="width:100%;height:100%;object-fit:contain;">` : shapeSVG(p.shape,p.color)}</div>
         <div class="cart-item-info">
           <h4>${p.name}</h4>
-          <div class="cat-line">R$ ${p.price.toFixed(2).replace('.',',')} / un.${(p.fonte==='parceiro'||p.fonte==='dsers') ? ' · <span style="color:var(--amber,#b8823a);">entrega mais longa</span>' : ''}</div>
+          <div class="cat-line">R$ ${unitPrice(p,qty).toFixed(2).replace('.',',')} / un.${(p.fonte==='parceiro'||p.fonte==='dsers') ? ' · <span style="color:var(--amber,#b8823a);">entrega mais longa</span>' : ''}</div>
           <div class="qty-row">
             <button class="qty-btn" onclick="changeQty(${JSON.stringify(id)},-1)">−</button>
             <span class="qty-num">${qty}</span>
@@ -1083,7 +1080,7 @@ function renderCart(){
             <button class="remove-link" onclick="removeItem(${JSON.stringify(id)})">remover</button>
           </div>
         </div>
-        <div class="item-price">R$ ${(p.price*qty).toFixed(2).replace('.',',')}</div>
+        <div class="item-price">R$ ${(Math.round(unitPrice(p,qty)*100)*qty/100).toFixed(2).replace('.',',')}</div>
       </div>`;
     }).join('');
   }
@@ -1165,7 +1162,7 @@ document.getElementById('favBtn').onclick = () => {
 ===================================================== */
 const modalOverlay = document.getElementById('modalOverlay');
 document.getElementById('closeModal').onclick = closeModal;
-function closeModal(){ destroyCardBrick(); modalOverlay.classList.remove('show'); }
+function closeModal(){ modalOverlay.classList.remove('show'); }
 function openCheckout(){
   if(cartCount()===0) return;
   state.checkoutStep = 1;
@@ -1181,7 +1178,6 @@ function updateStepsTrack(){
 function goStep(n){ state.checkoutStep = n; renderStep(); }
 
 function renderStep(){
-  destroyCardBrick();
   updateStepsTrack();
   const title = document.getElementById('modalTitle');
   const body = document.getElementById('modalBody');
@@ -1220,9 +1216,13 @@ function renderStep(){
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           PIX
         </div>
-        <div class="pay-tab ${state.payMethod==='card'?'selected':''}" onclick="setPayMethod('card')">
+        <div class="pay-tab ${state.payMethod==='credit'?'selected':''}" onclick="setPayMethod('credit')">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="1" y="5" width="22" height="14" rx="2"/><path d="M1 10h22"/></svg>
-          Cartão (crédito ou débito)
+          Crédito
+        </div>
+        <div class="pay-tab ${state.payMethod==='debit'?'selected':''}" onclick="setPayMethod('debit')">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="1" y="5" width="22" height="14" rx="2"/><path d="M1 10h22"/><path d="M6 15h4"/></svg>
+          Débito
         </div>
       </div>
       <div id="payFields"></div>
@@ -1268,18 +1268,9 @@ function renderStep(){
         <div class="summary-line"><span>Frete</span><span>${shipCost===0?'Grátis':'R$ '+shipCost.toFixed(2).replace('.',',')}</span></div>
         <div class="summary-line total"><span>Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
       </div>
-      ${state.payMethod==='card' ? `
-        <div id="cardErr" class="card-err"></div>
-        <div id="cardLoading" class="card-note">Carregando formulário seguro do cartão…</div>
-        <div id="cardPaymentBrick_container"></div>` : ''}
     `;
-    if(state.payMethod==='card'){
-      foot.innerHTML = `<button class="btn btn-outline" onclick="goStep(2)">Voltar</button>`;
-      mountCardBrick();
-    } else {
-      foot.innerHTML = `<button class="btn btn-outline" onclick="goStep(2)">Voltar</button>
-        <button class="btn btn-primary" onclick="confirmOrder()">Confirmar pedido</button>`;
-    }
+    foot.innerHTML = `<button class="btn btn-outline" onclick="goStep(2)">Voltar</button>
+      <button class="btn btn-primary" onclick="confirmOrder()">Confirmar pedido</button>`;
   }
 
   else if(state.checkoutStep===4){
@@ -1301,13 +1292,12 @@ function renderStep(){
       `;
       foot.innerHTML = `<button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="finishCheckout()">${state.orderStatus==='pago' ? 'Concluir' : 'Fechar (acompanho por e-mail)'}</button>`;
     } else {
-      const aprovado = state.orderStatus==='pago';
-      title.textContent = aprovado ? 'Pagamento aprovado' : 'Pagamento em análise';
+      title.textContent = 'Pedido confirmado';
       body.innerHTML = `
         <div class="success-screen">
           <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
           <h3 style="font-size:22px;">Obrigado pela sua compra!</h3>
-          <p style="margin-top:8px;">${aprovado ? 'Seu pagamento foi aprovado e o pedido já está sendo preparado.' : 'Recebemos seu pedido. O banco ainda está analisando o pagamento — assim que for aprovado você recebe a confirmação por e-mail.'}</p>
+          <p style="margin-top:8px;">Seu pagamento foi aprovado e o pedido já está sendo preparado.</p>
           <div class="order-number">Pedido #${orderNum}</div>
           <p style="font-size:13px;">Previsão de entrega: <b>${state.shipping?.eta}</b> via ${state.shipping?.name}</p>
         </div>
@@ -1319,11 +1309,12 @@ function renderStep(){
 
 function setPayMethod(m){ state.payMethod = m; renderStep(); }
 function payLabel(){
-  return {pix:'PIX', card:'Cartão de crédito ou débito'}[state.payMethod];
+  return {pix:'PIX', credit:'Cartão de crédito', debit:'Cartão de débito'}[state.payMethod];
 }
 function payDetail(){
   if(state.payMethod==='pix') return 'Aprovação em minutos';
-  return 'Você digita os dados logo abaixo, em campo seguro do Mercado Pago';
+  if(state.payMethod==='credit') return (state.installments||1)+'x sem juros • final '+(state.cardNumber ? state.cardNumber.slice(-4):'----');
+  return 'Débito à vista • final '+(state.cardNumber ? state.cardNumber.slice(-4):'----');
 }
 function renderPayFields(){
   const wrap = document.getElementById('payFields');
@@ -1334,9 +1325,20 @@ function renderPayFields(){
       </div>`;
   } else {
     wrap.innerHTML = `
-      <div class="pix-box">
-        <div style="font-size:13px;">Você digita os dados do cartão (crédito ou débito) na última etapa, em um campo seguro do Mercado Pago. O parcelamento aparece lá.</div>
-      </div>`;
+      <div class="field"><label>Número do cartão</label><input id="cardNumber" maxlength="19" placeholder="0000 0000 0000 0000"></div>
+      <div class="field"><label>Nome impresso no cartão</label><input id="cardName" placeholder="Como está no cartão"></div>
+      <div class="field-row thirds">
+        <div class="field"><label>Validade</label><input id="cardExp" maxlength="5" placeholder="MM/AA"></div>
+        <div class="field"><label>CVV</label><input id="cardCvv" maxlength="4" placeholder="123"></div>
+        <div class="field"><label>CPF</label><input id="cardCpf" placeholder="000.000.000-00"></div>
+      </div>
+      ${state.payMethod==='credit' ? `
+      <div class="field"><label>Parcelamento</label>
+        <select id="installments">
+          ${Array.from({length:10},(_,i)=>i+1).map(n=>`<option value="${n}">${n}x de R$ ${(cartSubtotal()/n).toFixed(2).replace('.',',')} sem juros</option>`).join('')}
+        </select>
+      </div>` : ''}
+    `;
   }
 }
 function copyPix(){
@@ -1506,13 +1508,27 @@ function etaFromBusinessDays(days){
 }
 
 function validatePaymentAndNext(){
+  if(state.payMethod!=='pix'){
+    const num = document.getElementById('cardNumber').value.replace(/\s/g,'');
+    const name = document.getElementById('cardName').value.trim();
+    const exp = document.getElementById('cardExp').value.trim();
+    const cvv = document.getElementById('cardCvv').value.trim();
+    if(num.length < 13 || !name || exp.length < 4 || cvv.length < 3){
+      showToast('Preencha os dados do cartão corretamente');
+      return;
+    }
+    state.cardNumber = num; state.cardName = name;
+    if(state.payMethod==='credit'){
+      state.installments = document.getElementById('installments').value;
+    }
+  }
   goStep(3);
 }
 
 function buildOrderItems(){
   return Object.entries(state.cart).map(([id,qty])=>{
     const p = PRODUCTS.find(p=>p.id==id);
-    const item = { id: p.id, nome: p.name, preco: p.price, quantidade: qty, peso: p.weight || 0.1 };
+    const item = { id: p.id, nome: p.name, preco: unitPrice(p,qty), quantidade: qty, peso: p.weight || 0.1 };
     if(p.fonte==='parceiro' && p.cjVid){ item.fonte = 'parceiro'; item.cjVid = p.cjVid; }
     if(p.fonte==='dsers'){ item.fonte='dsers'; item.dsersSku=p.dsersSku; item.variante=p.variante; item.shopifyTitle=p.shopifyTitle||p.name; }
     return item;
@@ -1565,103 +1581,14 @@ async function confirmOrder(){
     }finally{
       if(btn){ btn.disabled = false; btn.textContent = 'Confirmar pedido'; }
     }
+  } else {
+    // Cartão ainda não está ligado a um processador de pagamento real —
+    // capturar número de cartão direto num formulário próprio não é seguro (PCI-DSS).
+    // Esse caminho segue simulado até entrar o Checkout Pro do Mercado Pago.
+    state.orderNumber = 'CV' + Math.floor(100000 + Math.random()*899999);
+    state.orderStatus = null;
+    goStep(4);
   }
-  // Cartão: o pedido é criado por submitCardPayment(), chamado pelo botão "Pagar" do formulário do Mercado Pago.
-}
-
-/* =====================================================
-   CARTÃO — Mercado Pago Card Payment Brick
-   O número do cartão é digitado em campos seguros (iframes) do Mercado Pago e vira um token
-   de uso único no navegador. Só o token chega ao nosso backend.
-===================================================== */
-function destroyCardBrick(){
-  state.brickSeq = (state.brickSeq||0) + 1; // invalida montagens ainda em andamento
-  if(state.cardBrick){ try{ state.cardBrick.unmount(); }catch(e){} state.cardBrick = null; }
-}
-function showCardError(msg){
-  const el = document.getElementById('cardErr');
-  if(!el) return;
-  el.textContent = msg || '';
-  el.classList.toggle('show', !!msg);
-}
-async function mountCardBrick(){
-  const seq = state.brickSeq;
-  const loading = document.getElementById('cardLoading');
-  try{
-    if(typeof MercadoPago === 'undefined') throw new Error('Não foi possível carregar o Mercado Pago. Recarregue a página e tente novamente.');
-    if(!window.CEU_VERDE_API_BASE) throw new Error('Backend ainda não configurado.');
-    const r = await fetch(`${window.CEU_VERDE_API_BASE}/payment/config`, {method:'GET', cache:'no-store'});
-    const d = await r.json().catch(()=>({}));
-    if(!r.ok || !d.publicKey) throw new Error(d.erro || 'Pagamento com cartão indisponível no momento. Pague com PIX.');
-    const publicKey = String(d.publicKey).trim();
-    if(!publicKey) throw new Error('Public Key do Mercado Pago não foi retornada pelo servidor.');
-    state.mpPublicKey = publicKey;
-    state.mp = new MercadoPago(publicKey, {locale:'pt-BR'});
-    const total = Number((cartSubtotal() + (state.shipping ? Number(state.shipping.price) : 0)).toFixed(2));
-    const controller = await state.mp.bricks().create('cardPayment', 'cardPaymentBrick_container', {
-      initialization: {amount: total, payer: {email: state.email || ''}},
-      customization: {
-        paymentMethods: {maxInstallments: 10},
-        visual: {style: {theme:'default'}, texts: {formSubmit: 'Pagar R$ ' + total.toFixed(2).replace('.',',')}}
-      },
-      callbacks: {
-        onReady: () => { const l=document.getElementById('cardLoading'); if(l) l.style.display='none'; },
-        onSubmit: (formData) => submitCardPayment(formData),
-        onError: (err) => {
-          console.error('Card Brick:', err);
-          const l=document.getElementById('cardLoading'); if(l) l.style.display='none';
-          showCardError('O Mercado Pago não conseguiu carregar os campos do cartão. Atualize a página e tente novamente.');
-        }
-      }
-    });
-    if(seq !== state.brickSeq){ try{controller.unmount();}catch(e){} return; }
-    state.cardBrick = controller;
-  }catch(err){
-    console.error('Erro ao montar Card Brick:', err);
-    if(loading) loading.style.display='none';
-    showCardError(err.message || 'Não foi possível abrir o formulário de cartão. Tente de novo ou pague com PIX.');
-  }
-}
-function submitCardPayment(formData){
-  return new Promise(async (resolve, reject) => {
-    showCardError('');
-    try{
-      const res = await fetch(`${window.CEU_VERDE_API_BASE}/orders`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          itens: buildOrderItems(),
-          cliente: { nome: state.nome, email: state.email, telefone: state.telefone, cpf: state.cpf },
-          endereco: { rua: state.rua, numero: state.numero, bairro: state.bairro, cidade: state.city, uf: state.uf, cep: state.cep },
-          frete: { serviceId: state.shipping?.serviceId || state.shipping?.id },
-          cartao: {
-            token: formData.token,
-            paymentMethodId: formData.payment_method_id,
-            issuerId: formData.issuer_id,
-            installments: formData.installments,
-            payer: formData.payer,
-            deviceId: window.MP_DEVICE_SESSION_ID || null
-          }
-        })
-      });
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok) throw new Error(data.erro || 'Não foi possível processar o cartão. Tente novamente.');
-      if(data.status === 'rejected' || data.status === 'cancelled'){
-        showCardError(data.mensagem || 'O pagamento não foi aprovado. Tente outro cartão ou pague com PIX.');
-        reject();
-        return;
-      }
-      state.orderNumber = data.orderId;
-      state.orderStatus = data.status === 'approved' ? 'pago' : 'pendente';
-      resolve();
-      goStep(4);
-      if(state.orderStatus !== 'pago') pollOrderStatus();
-    }catch(err){
-      console.error(err);
-      showCardError(err.message || 'Não foi possível processar o cartão. Tente novamente.');
-      reject();
-    }
-  });
 }
 
 function pollOrderStatus(){
