@@ -7,6 +7,8 @@
 <link rel="icon" type="image/jpeg" href="images/img-01-197089a82bcf.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
 <style>
 :root{
   --forest:#1f3d2b;
@@ -424,6 +426,30 @@ footer{background:var(--forest-dark);color:rgba(246,241,230,0.85);padding:64px 0
 .product-detail-overlay{position:fixed;inset:0;background:rgba(18,35,24,.62);z-index:170;display:none;align-items:center;justify-content:center;padding:22px}.product-detail-overlay.show{display:flex}.product-detail{width:min(1180px,96vw);max-height:94vh;overflow:auto;background:var(--paper);border-radius:24px;box-shadow:0 35px 90px rgba(0,0,0,.35);position:relative}.pd-close{position:sticky;top:16px;float:right;margin:16px 16px 0 0;z-index:4;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:24px}.pd-wrap{display:grid;grid-template-columns:1.08fr .92fr;gap:34px;padding:38px}.pd-gallery{display:grid;grid-template-columns:82px 1fr;gap:14px}.pd-thumbs{display:flex;flex-direction:column;gap:10px}.pd-thumb{width:82px;height:82px;border:2px solid transparent;border-radius:12px;overflow:hidden;background:var(--cream-2);padding:0}.pd-thumb.active{border-color:var(--forest)}.pd-thumb img{width:100%;height:100%;object-fit:cover}.pd-main{height:620px;border-radius:18px;overflow:hidden;background:var(--cream-2)}.pd-main img{width:100%;height:100%;object-fit:contain;object-position:center;background:var(--cream-2)}.pd-info{padding:14px 4px}.pd-info h2{font-size:42px;line-height:1.05;margin:14px 0}.pd-rating{color:var(--gold);font-weight:700;margin:10px 0}.pd-price{font-family:'Fraunces',serif;font-size:40px;font-weight:700;color:var(--forest-dark);margin:24px 0 2px}.pd-pix{font-size:14px;color:var(--ink-soft)}.pd-freight{display:inline-flex;margin:20px 0;padding:10px 14px;border-radius:22px;background:#edf1e5;font-size:13px;font-weight:700}.pd-desc{font-size:15px;line-height:1.7}.pd-benefits{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0}.pd-benefit{padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px;font-weight:700}.pd-buyrow{display:grid;grid-template-columns:120px 1fr;gap:12px;margin-top:24px}.pd-qty{display:flex;align-items:center;justify-content:space-around;border:1px solid var(--line);border-radius:14px}.pd-qty button{border:0;background:transparent;font-size:20px}.pd-cart{border:0;border-radius:14px;background:var(--forest-dark);color:#fff;font-weight:800;font-size:15px}.pd-whatsapp{width:100%;margin-top:12px;padding:14px;border-radius:14px;border:1.5px solid var(--forest);background:transparent;color:var(--forest-dark);font-weight:800}.pd-trust{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;font-size:11.5px;color:var(--ink-soft)}
 @media(max-width:800px){.product-detail-overlay{padding:0}.product-detail{width:100%;height:100%;max-height:100%;border-radius:0}.pd-wrap{grid-template-columns:1fr;padding:18px}.pd-gallery{grid-template-columns:1fr}.pd-thumbs{order:2;flex-direction:row;overflow:auto}.pd-main{height:420px}.pd-info h2{font-size:31px}.pd-price{font-size:32px}.pd-buyrow{grid-template-columns:105px 1fr}}
 </style>
+
+<style>
+/* Mercado Pago — campos seguros do cartão (iframe/tokenização) */
+.mp-secure-field{
+  width:100%;
+  min-height:44px;
+  padding:11px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:var(--cream);
+}
+.mp-secure-field:focus-within{border-color:var(--sage);background:var(--paper);}
+.mp-card-loading{
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--cream-2);
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+.mp-progress{width:100%;height:4px;margin-top:8px;display:none;}
+.mp-progress.loading{display:block;}
+</style>
+
 </head>
 <body>
 
@@ -709,6 +735,7 @@ footer{background:var(--forest-dark);color:rgba(246,241,230,0.85);padding:64px 0
 <script>
 // Backend oficial da Céu Verde Amazônia (Render)
 window.CEU_VERDE_API_BASE = 'https://ceu-verde-backend.onrender.com/api';
+// Checkout atualizado: PIX + cartão real via Mercado Pago SDK JS v2.
 
 
 /* =====================================================
@@ -830,6 +857,29 @@ let state = {
   payMethod: 'pix',
 };
 state.cart = {}; // ensure fresh in-memory cart (no browser storage per policy)
+
+// Mercado Pago: o navegador recebe apenas a PUBLIC KEY.
+// O ACCESS TOKEN continua somente no backend/Render.
+let mpPublicKey = null;
+let mpInstance = null;
+let mpCardForm = null;
+let mpCardInitSeq = 0;
+
+function mercadoPagoAmount(){
+  const frete = Number(state.shipping?.price || 0);
+  return Number((cartSubtotal() + frete).toFixed(2));
+}
+
+async function getMercadoPagoPublicKey(){
+  if(mpPublicKey) return mpPublicKey;
+  if(!window.CEU_VERDE_API_BASE) throw new Error('Backend de pagamento não configurado');
+  const res = await fetch(`${window.CEU_VERDE_API_BASE}/payment/config`);
+  const data = await res.json();
+  if(!res.ok || !data.publicKey) throw new Error(data.erro || 'Chave pública do Mercado Pago não configurada');
+  mpPublicKey = data.publicKey;
+  return mpPublicKey;
+}
+
 
 /* =====================================================
    ICON / BOTTLE SVG FACTORY
@@ -1292,12 +1342,14 @@ function renderStep(){
       `;
       foot.innerHTML = `<button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="finishCheckout()">${state.orderStatus==='pago' ? 'Concluir' : 'Fechar (acompanho por e-mail)'}</button>`;
     } else {
-      title.textContent = 'Pedido confirmado';
+      const cardApproved = state.orderStatus==='pago' || state.cardPaymentStatus==='approved';
+      const cardPending = ['pending','in_process'].includes(state.cardPaymentStatus);
+      title.textContent = cardApproved ? 'Pagamento aprovado' : (cardPending ? 'Pagamento em análise' : 'Pedido recebido');
       body.innerHTML = `
         <div class="success-screen">
           <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
-          <h3 style="font-size:22px;">Obrigado pela sua compra!</h3>
-          <p style="margin-top:8px;">Seu pagamento foi aprovado e o pedido já está sendo preparado.</p>
+          <h3 style="font-size:22px;">${cardApproved ? 'Pagamento aprovado!' : 'Pedido recebido!'}</h3>
+          <p style="margin-top:8px;">${cardApproved ? 'O Mercado Pago aprovou o pagamento. Seu pedido seguirá para processamento.' : 'O Mercado Pago está analisando o pagamento. Você receberá a atualização por e-mail.'}</p>
           <div class="order-number">Pedido #${orderNum}</div>
           <p style="font-size:13px;">Previsão de entrega: <b>${state.shipping?.eta}</b> via ${state.shipping?.name}</p>
         </div>
@@ -1307,40 +1359,195 @@ function renderStep(){
   }
 }
 
-function setPayMethod(m){ state.payMethod = m; renderStep(); }
+function setPayMethod(m){
+  state.payMethod = m;
+  state.cardPayment = null;
+  state.cardPaymentStatus = null;
+  state.installments = 1;
+  renderStep();
+}
 function payLabel(){
   return {pix:'PIX', credit:'Cartão de crédito', debit:'Cartão de débito'}[state.payMethod];
 }
 function payDetail(){
   if(state.payMethod==='pix') return 'Aprovação em minutos';
-  if(state.payMethod==='credit') return (state.installments||1)+'x sem juros • final '+(state.cardNumber ? state.cardNumber.slice(-4):'----');
-  return 'Débito à vista • final '+(state.cardNumber ? state.cardNumber.slice(-4):'----');
+  if(state.payMethod==='credit') return (state.installments||1)+'x • pagamento seguro pelo Mercado Pago';
+  return 'Débito à vista • pagamento seguro pelo Mercado Pago';
 }
+
+async function initMercadoPagoCardForm(){
+  const seq = ++mpCardInitSeq;
+  const loading = document.getElementById('mpCardLoading');
+  try{
+    if(!window.MercadoPago) throw new Error('SDK do Mercado Pago não carregou');
+    const publicKey = await getMercadoPagoPublicKey();
+    if(seq !== mpCardInitSeq || !document.getElementById('form-checkout')) return;
+
+    if(!mpInstance) mpInstance = new MercadoPago(publicKey, { locale:'pt-BR' });
+
+    mpCardForm = mpInstance.cardForm({
+      amount: mercadoPagoAmount().toFixed(2),
+      iframe: true,
+      form: {
+        id: 'form-checkout',
+        cardNumber: {
+          id: 'form-checkout__cardNumber',
+          placeholder: 'Número do cartão'
+        },
+        expirationDate: {
+          id: 'form-checkout__expirationDate',
+          placeholder: 'MM/AA'
+        },
+        securityCode: {
+          id: 'form-checkout__securityCode',
+          placeholder: 'CVV'
+        },
+        cardholderName: {
+          id: 'form-checkout__cardholderName',
+          placeholder: 'Nome como está no cartão'
+        },
+        issuer: {
+          id: 'form-checkout__issuer',
+          placeholder: 'Banco emissor'
+        },
+        installments: {
+          id: 'form-checkout__installments',
+          placeholder: 'Parcelas'
+        },
+        identificationType: {
+          id: 'form-checkout__identificationType',
+          placeholder: 'Tipo de documento'
+        },
+        identificationNumber: {
+          id: 'form-checkout__identificationNumber',
+          placeholder: 'CPF'
+        },
+        cardholderEmail: {
+          id: 'form-checkout__cardholderEmail',
+          placeholder: 'E-mail'
+        }
+      },
+      callbacks: {
+        onFormMounted: error => {
+          if(error){
+            console.error('Mercado Pago CardForm:', error);
+            showToast('Não foi possível carregar o cartão. Tente novamente.');
+            return;
+          }
+          if(loading) loading.style.display = 'none';
+        },
+        onSubmit: event => {
+          event.preventDefault();
+          const data = mpCardForm.getCardFormData();
+          if(!data?.token || !data?.paymentMethodId){
+            showToast('Confira os dados do cartão e tente novamente');
+            return;
+          }
+
+          state.installments = state.payMethod==='debit' ? 1 : Math.max(1, Number(data.installments) || 1);
+          state.cardPayment = {
+            token: data.token,
+            paymentMethodId: data.paymentMethodId,
+            issuerId: data.issuerId || null,
+            installments: state.installments,
+            payer: {
+              email: data.cardholderEmail || state.email,
+              identification: {
+                type: data.identificationType || 'CPF',
+                number: String(data.identificationNumber || state.cpf || '').replace(/\D/g,'')
+              }
+            },
+            deviceId: window.MP_DEVICE_SESSION_ID || null
+          };
+          goStep(3);
+        },
+        onFetching: () => {
+          const progress = document.getElementById('mpProgress');
+          if(progress) progress.classList.add('loading');
+          return () => {
+            const p = document.getElementById('mpProgress');
+            if(p) p.classList.remove('loading');
+          };
+        }
+      }
+    });
+  }catch(err){
+    console.error(err);
+    if(loading) loading.textContent = err.message || 'Pagamento com cartão indisponível.';
+    showToast(err.message || 'Pagamento com cartão indisponível');
+  }
+}
+
 function renderPayFields(){
   const wrap = document.getElementById('payFields');
   if(state.payMethod==='pix'){
+    mpCardInitSeq++;
+    mpCardForm = null;
     wrap.innerHTML = `
       <div class="pix-box">
-        <div style="font-size:13px;">O código PIX é gerado na próxima etapa, depois de revisar o pedido.</div>
+        <div style="font-size:13px;">O código PIX real é gerado pelo Mercado Pago na próxima etapa, depois de revisar o pedido.</div>
       </div>`;
-  } else {
-    wrap.innerHTML = `
-      <div class="field"><label>Número do cartão</label><input id="cardNumber" maxlength="19" placeholder="0000 0000 0000 0000"></div>
-      <div class="field"><label>Nome impresso no cartão</label><input id="cardName" placeholder="Como está no cartão"></div>
-      <div class="field-row thirds">
-        <div class="field"><label>Validade</label><input id="cardExp" maxlength="5" placeholder="MM/AA"></div>
-        <div class="field"><label>CVV</label><input id="cardCvv" maxlength="4" placeholder="123"></div>
-        <div class="field"><label>CPF</label><input id="cardCpf" placeholder="000.000.000-00"></div>
-      </div>
-      ${state.payMethod==='credit' ? `
-      <div class="field"><label>Parcelamento</label>
-        <select id="installments">
-          ${Array.from({length:10},(_,i)=>i+1).map(n=>`<option value="${n}">${n}x de R$ ${(cartSubtotal()/n).toFixed(2).replace('.',',')} sem juros</option>`).join('')}
-        </select>
-      </div>` : ''}
-    `;
+    return;
   }
+
+  wrap.innerHTML = `
+    <div id="mpCardLoading" class="mp-card-loading">Carregando ambiente seguro do Mercado Pago…</div>
+    <form id="form-checkout" autocomplete="on">
+      <div class="field">
+        <label>Número do cartão</label>
+        <div id="form-checkout__cardNumber" class="mp-secure-field"></div>
+      </div>
+
+      <div class="field">
+        <label>Nome impresso no cartão</label>
+        <input type="text" id="form-checkout__cardholderName" autocomplete="cc-name" placeholder="Como está no cartão">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Validade</label>
+          <div id="form-checkout__expirationDate" class="mp-secure-field"></div>
+        </div>
+        <div class="field">
+          <label>CVV</label>
+          <div id="form-checkout__securityCode" class="mp-secure-field"></div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Banco emissor</label>
+          <select id="form-checkout__issuer"></select>
+        </div>
+        <div class="field">
+          <label>${state.payMethod==='credit' ? 'Parcelamento' : 'Pagamento'}</label>
+          <select id="form-checkout__installments"></select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Documento</label>
+          <select id="form-checkout__identificationType"><option value="CPF">CPF</option></select>
+        </div>
+        <div class="field">
+          <label>CPF</label>
+          <input type="text" id="form-checkout__identificationNumber" value="${String(state.cpf||'').replace(/\D/g,'')}" readonly>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>E-mail do comprador</label>
+        <input type="email" id="form-checkout__cardholderEmail" value="${state.email||''}" readonly>
+      </div>
+
+      <button type="submit" id="form-checkout__submit" style="display:none;">Continuar</button>
+      <progress id="mpProgress" class="mp-progress" value="0">Carregando…</progress>
+    </form>
+  `;
+  initMercadoPagoCardForm();
 }
+
 function copyPix(){
   const input = document.getElementById('pixCodeInput');
   input.select();
@@ -1508,21 +1715,22 @@ function etaFromBusinessDays(days){
 }
 
 function validatePaymentAndNext(){
-  if(state.payMethod!=='pix'){
-    const num = document.getElementById('cardNumber').value.replace(/\s/g,'');
-    const name = document.getElementById('cardName').value.trim();
-    const exp = document.getElementById('cardExp').value.trim();
-    const cvv = document.getElementById('cardCvv').value.trim();
-    if(num.length < 13 || !name || exp.length < 4 || cvv.length < 3){
-      showToast('Preencha os dados do cartão corretamente');
-      return;
-    }
-    state.cardNumber = num; state.cardName = name;
-    if(state.payMethod==='credit'){
-      state.installments = document.getElementById('installments').value;
-    }
+  if(state.payMethod==='pix'){
+    goStep(3);
+    return;
   }
-  goStep(3);
+  if(!mpCardForm){
+    showToast('Aguarde o ambiente seguro do Mercado Pago carregar');
+    return;
+  }
+  const form = document.getElementById('form-checkout');
+  if(!form){
+    showToast('Formulário do cartão não está disponível');
+    return;
+  }
+  // O próprio Mercado Pago valida os campos e gera um token de uso único.
+  if(form.requestSubmit) form.requestSubmit();
+  else form.dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));
 }
 
 function buildOrderItems(){
@@ -1549,45 +1757,72 @@ function buildShippingItems(){
 }
 
 async function confirmOrder(){
-  if(state.payMethod==='pix'){
-    if(!window.CEU_VERDE_API_BASE){
-      showToast('Backend ainda não configurado — não dá pra gerar o PIX real');
-      return;
+  if(!window.CEU_VERDE_API_BASE){
+    showToast('Backend de pagamento ainda não configurado');
+    return;
+  }
+
+  const btn = document.querySelector('#modalFoot .btn-primary');
+  const oldText = btn?.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = state.payMethod==='pix' ? 'Gerando PIX…' : 'Processando cartão…'; }
+
+  try{
+    const payload = {
+      itens: buildOrderItems(),
+      cliente: { nome: state.nome, email: state.email, telefone: state.telefone, cpf: state.cpf },
+      endereco: { rua: state.rua, numero: state.numero, bairro: state.bairro, cidade: state.city, uf: state.uf, cep: state.cep },
+      frete: { serviceId: state.shipping?.serviceId || state.shipping?.id }
+    };
+
+    if(state.payMethod!=='pix'){
+      if(!state.cardPayment?.token || !state.cardPayment?.paymentMethodId){
+        showToast('Os dados seguros do cartão expiraram. Preencha novamente.');
+        goStep(2);
+        return;
+      }
+      payload.cartao = state.cardPayment;
     }
-    const btn = document.querySelector('#modalFoot .btn-primary');
-    if(btn){ btn.disabled = true; btn.textContent = 'Gerando pedido…'; }
-    try{
-      const res = await fetch(`${window.CEU_VERDE_API_BASE}/orders`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          itens: buildOrderItems(),
-          cliente: { nome: state.nome, email: state.email, telefone: state.telefone, cpf: state.cpf },
-          endereco: { rua: state.rua, numero: state.numero, bairro: state.bairro, cidade: state.city, uf: state.uf, cep: state.cep },
-          frete: { serviceId: state.shipping?.serviceId || state.shipping?.id }
-        })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.erro || 'Falha ao criar pedido');
-      state.orderNumber = data.orderId;
+
+    const res = await fetch(`${window.CEU_VERDE_API_BASE}/orders`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.erro || 'Falha ao criar pedido/pagamento');
+
+    state.orderNumber = data.orderId;
+
+    if(state.payMethod==='pix'){
       state.pixCode = data.qrCode;
       state.pixQrBase64 = data.qrCodeBase64;
       state.orderStatus = 'pendente';
       goStep(4);
       pollOrderStatus();
-    }catch(err){
-      console.error(err);
-      showToast('Não deu pra gerar o PIX agora. Tente de novo em instantes.');
-    }finally{
-      if(btn){ btn.disabled = false; btn.textContent = 'Confirmar pedido'; }
+      return;
     }
-  } else {
-    // Cartão ainda não está ligado a um processador de pagamento real —
-    // capturar número de cartão direto num formulário próprio não é seguro (PCI-DSS).
-    // Esse caminho segue simulado até entrar o Checkout Pro do Mercado Pago.
-    state.orderNumber = 'CV' + Math.floor(100000 + Math.random()*899999);
-    state.orderStatus = null;
+
+    state.cardPaymentStatus = data.status || 'pending';
+
+    if(['rejected','cancelled'].includes(state.cardPaymentStatus)){
+      const msg = data.mensagem || 'O cartão não foi aprovado. Confira os dados ou tente outro cartão.';
+      state.cardPayment = null; // token de cartão é de uso único
+      showToast(msg);
+      goStep(2);
+      return;
+    }
+
+    state.orderStatus = state.cardPaymentStatus === 'approved' ? 'aprovado' : 'pendente';
+    state.cardPayment = null; // não reutiliza token após enviar ao Mercado Pago
     goStep(4);
+    pollOrderStatus();
+  }catch(err){
+    console.error(err);
+    if(state.payMethod!=='pix') state.cardPayment = null;
+    showToast(err.message || 'Não foi possível processar o pagamento agora.');
+    if(state.payMethod!=='pix') goStep(2);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = oldText || 'Confirmar pedido'; }
   }
 }
 
@@ -1600,6 +1835,7 @@ function pollOrderStatus(){
       const data = await res.json();
       if(data.pagamento === 'pago' && state.orderStatus !== 'pago'){
         state.orderStatus = 'pago';
+        if(state.payMethod!=='pix') state.cardPaymentStatus = 'approved';
         clearInterval(state.pollTimer);
         if(state.checkoutStep===4) renderStep();
         showToast('Pagamento confirmado! 🎉');
